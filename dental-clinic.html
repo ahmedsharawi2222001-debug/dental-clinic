@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>عيادة الابتسامة | نظام إدارة العيادة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Aref+Ruqaa:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="logo">
+      <div class="mark">🦷</div>
+      <div>
+        <div class="name brand-font">عيادة الابتسامة</div>
+        <div class="sub">نظام إدارة العيادة</div>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="home" class="active">الرئيسية</button>
+      <button data-tab="services">الخدمات</button>
+      <button data-tab="bookings">الحجوزات</button>
+      <button data-tab="patients">ملفات المرضى</button>
+      <button data-tab="settings">الإعدادات</button>
+    </nav>
+  </header>
+
+  <!-- HOME -->
+  <div class="view active" id="view-home">
+    <div class="hero">
+      <div class="eyebrow">لوحة العيادة اليومية</div>
+      <h1 id="heroDate">أهلًا بيك، النهارده الأربعاء</h1>
+      <p>تابع حجوزات اليوم، وملفات المرضى، والخدمات المقدمة من مكان واحد. أي حجز جديد يتسجل هنا فورًا ويقدر يوصل لواتساب المريض عن طريق n8n.</p>
+      <div class="cta">
+        <button class="btn btn-gold" onclick="openBookingModal()">+ حجز جديد</button>
+        <button class="btn btn-ghost" onclick="switchTab('bookings')">عرض حجوزات اليوم</button>
+      </div>
+      <div class="smile-arc" id="smileArc"></div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="num" id="statToday">0</div><div class="label">حجوزات اليوم</div></div>
+      <div class="stat-card"><div class="num" id="statPatients">0</div><div class="label">إجمالي المرضى</div></div>
+      <div class="stat-card"><div class="num" id="statServices">0</div><div class="label">الخدمات المتاحة</div></div>
+      <div class="stat-card"><div class="num" id="statMonth">0</div><div class="label">حجوزات الشهر</div></div>
+    </div>
+
+    <section class="block">
+      <h2>حجوزات اليوم <span class="count" id="todayCount">0</span></h2>
+      <div id="todayBookingsList"></div>
+    </section>
+  </div>
+
+  <!-- SERVICES -->
+  <div class="view" id="view-services">
+    <section class="block">
+      <h2>الخدمات المقدمة <span class="count" id="servicesCount">0</span></h2>
+      <div class="toolbar">
+        <input class="search-input" id="serviceSearch" placeholder="ابحث عن خدمة...">
+        <button class="btn btn-teal" onclick="openServiceModal()">+ إضافة خدمة</button>
+      </div>
+      <div class="grid-services" id="servicesGrid"></div>
+    </section>
+  </div>
+
+  <!-- BOOKINGS -->
+  <div class="view" id="view-bookings">
+    <section class="block">
+      <h2>الحجوزات <span class="count" id="bookingsCount">0</span></h2>
+      <div class="toolbar">
+        <input type="date" class="search-input" id="bookingDateFilter" style="max-width:190px;">
+        <button class="btn btn-outline btn-sm" onclick="clearDateFilter()">كل التواريخ</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-teal" onclick="openBookingModal()">+ حجز جديد</button>
+      </div>
+      <div id="bookingsTableWrap"></div>
+    </section>
+  </div>
+
+  <!-- PATIENTS -->
+  <div class="view" id="view-patients">
+    <section class="block">
+      <h2>ملفات المرضى <span class="count" id="patientsCount">0</span></h2>
+      <div class="toolbar">
+        <input class="search-input" id="patientSearch" placeholder="ابحث بالاسم أو رقم الهاتف...">
+        <button class="btn btn-teal" onclick="openPatientModal()">+ إضافة مريض</button>
+      </div>
+      <div id="patientsTableWrap"></div>
+    </section>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="view" id="view-settings">
+    <section class="block">
+      <h2>الإعدادات</h2>
+      <div class="card">
+        <div class="field">
+          <label>اسم العيادة</label>
+          <input id="setClinicName" placeholder="عيادة الابتسامة">
+        </div>
+        <div class="field">
+          <label>رقم هاتف العيادة</label>
+          <input id="setClinicPhone" placeholder="01xxxxxxxxx">
+        </div>
+        <div class="field">
+          <label>رابط Webhook الخاص بـ n8n</label>
+          <input id="setWebhookUrl" placeholder="https://your-n8n-instance/webhook/xxxx" dir="ltr" style="text-align:left;">
+        </div>
+        <div class="settings-note">
+          لما تحفظ رابط الـ Webhook، أي حجز جديد أو تعديل أو إلغاء هيتبعت لـ n8n تلقائيًا كـ JSON، وبعدين تقدر تبني الـ workflow اللي يبعت رسالة تأكيد على واتساب. لو الرابط فاضي، الموقع هيشتغل عادي من غير إرسال.
+        </div>
+        <div class="modal-actions" style="justify-content:flex-start;margin-top:16px;">
+          <button class="btn btn-teal" onclick="saveSettings()">حفظ الإعدادات</button>
+          <button class="btn btn-outline" onclick="testWebhook()">اختبار الاتصال</button>
+        </div>
+        <div id="webhookStatus"></div>
+      </div>
+    </section>
+  </div>
+
+</div>
+
+<!-- Booking Modal -->
+<div class="overlay" id="modalBooking">
+  <div class="modal">
+    <h3 id="bookingModalTitle">حجز ميعاد جديد</h3>
+    <input type="hidden" id="bookingId">
+    <div class="field">
+      <label>المريض</label>
+      <select id="bookingPatientSelect" onchange="toggleNewPatientFields()">
+        <option value="__new__">+ مريض جديد</option>
+      </select>
+    </div>
+    <div id="newPatientFields">
+      <div class="field-row">
+        <div class="field"><label>اسم المريض</label><input id="bookingNewName"></div>
+        <div class="field"><label>رقم الهاتف</label><input id="bookingNewPhone" dir="ltr"></div>
+      </div>
+    </div>
+    <div class="field">
+      <label>الخدمة</label>
+      <select id="bookingServiceSelect"></select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>التاريخ</label><input type="date" id="bookingDate"></div>
+      <div class="field"><label>الوقت</label><input type="time" id="bookingTime"></div>
+    </div>
+    <div class="field">
+      <label>ملاحظات (اختياري)</label>
+      <textarea id="bookingNotes"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalBooking')">إلغاء</button>
+      <button class="btn btn-teal" onclick="saveBooking()">حفظ الحجز</button>
+    </div>
+  </div>
+</div>
+
+<!-- Service Modal -->
+<div class="overlay" id="modalService">
+  <div class="modal">
+    <h3 id="serviceModalTitle">إضافة خدمة</h3>
+    <input type="hidden" id="serviceId">
+    <div class="field"><label>اسم الخدمة</label><input id="serviceName"></div>
+    <div class="field"><label>الوصف</label><textarea id="serviceDesc"></textarea></div>
+    <div class="field-row">
+      <div class="field"><label>السعر (جنيه)</label><input id="servicePrice" type="number"></div>
+      <div class="field"><label>مدة الجلسة (دقيقة)</label><input id="serviceDuration" type="number"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalService')">إلغاء</button>
+      <button class="btn btn-teal" onclick="saveService()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Modal -->
+<div class="overlay" id="modalPatient">
+  <div class="modal">
+    <h3 id="patientModalTitle">إضافة مريض</h3>
+    <input type="hidden" id="patientId">
+    <div class="field-row">
+      <div class="field"><label>الاسم</label><input id="patientName"></div>
+      <div class="field"><label>السن</label><input id="patientAge" type="number"></div>
+    </div>
+    <div class="field"><label>رقم الهاتف</label><input id="patientPhone" dir="ltr"></div>
+    <div class="field"><label>العنوان</label><input id="patientAddress"></div>
+    <div class="field"><label>التاريخ المرضي / ملاحظات</label><textarea id="patientHistory"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modalPatient')">إلغاء</button>
+      <button class="btn btn-teal" onclick="savePatient()">حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Detail Modal -->
+<div class="overlay" id="modalPatientDetail">
+  <div class="modal" id="patientDetailContent"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
