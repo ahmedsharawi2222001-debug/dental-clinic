@@ -1,5 +1,6 @@
 /* ---------------- state ---------------- */
-let DB = { services: [], patients: [], bookings: [], settings: { clinicName:'عيادة الابتسامة', clinicPhone:'', webhookUrl:'' } };
+let DB = { services: [], patients: [], bookings: [], settings: { clinicName:'عيادة الابتسامة', clinicPhone:'', webhookUrl:'', syncWebhookUrl:'' } };
+let syncTimer = null;
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
 const todayStr = () => new Date().toISOString().slice(0,10);
@@ -12,7 +13,8 @@ async function loadDB(){
   if(!DB.services) DB.services=[];
   if(!DB.patients) DB.patients=[];
   if(!DB.bookings) DB.bookings=[];
-  if(!DB.settings) DB.settings={clinicName:'عيادة الابتسامة',clinicPhone:'',webhookUrl:''};
+  if(!DB.settings) DB.settings={clinicName:'عيادة الابتسامة',clinicPhone:'',webhookUrl:'',syncWebhookUrl:''};
+  if(DB.settings.syncWebhookUrl===undefined) DB.settings.syncWebhookUrl='';
 
   if(DB.services.length===0){
     DB.services = [
@@ -72,6 +74,70 @@ async function sendWebhook(payload){
     console.error('webhook error', e);
     return {sent:false, reason:e.message};
   }
+}
+
+/* ---------------- sync from n8n (Google Sheets) ---------------- */
+// بيجيب أحدث الحجوزات من n8n (اللي بيقرأها من جوجل شيت) ويحدث القاعدة المحلية بيها
+async function fetchBookingsFromSheet(silent){
+  const url = DB.settings.syncWebhookUrl;
+  if(!url) return {ok:false, reason:'no-url'};
+  try{
+    const res = await fetch(url, { method:'GET' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    // n8n ممكن يرجع array مباشرة أو object فيه مفتاح bookings/data
+    const rows = Array.isArray(data) ? data : (data.bookings || data.data || []);
+    mergeBookingsFromSheet(rows);
+    await saveDB();
+    render();
+    if(!silent) showToast('تم تحديث الحجوزات ✓');
+    return {ok:true, count: rows.length};
+  }catch(e){
+    console.error('sync error', e);
+    if(!silent) showToast('فشل تحديث الحجوزات — تأكد من رابط المزامنة');
+    return {ok:false, reason:e.message};
+  }
+}
+
+// بيدمج الصفوف الجايه من الشيت مع الحجوزات المحلية من غير تكرار
+function mergeBookingsFromSheet(rows){
+  rows.forEach(row=>{
+    // استخدم id لو موجود من الشيت، وإلا اعمل مفتاح فريد من الاسم+التاريخ+الوقت
+    const sheetId = row.id || row.bookingId || null;
+    const matchKey = b => sheetId ? (b.sheetId===sheetId) :
+      (b.patientName===row.patientName && b.date===row.date && b.time===row.time);
+
+    const existing = DB.bookings.find(matchKey);
+    const booking = {
+      id: existing ? existing.id : uid(),
+      sheetId: sheetId || (existing && existing.sheetId) || null,
+      patientId: existing ? existing.patientId : (row.patientId || uid()),
+      patientName: row.patientName || row.name || '',
+      phone: row.phone || '',
+      serviceId: existing ? existing.serviceId : (row.serviceId || ''),
+      serviceName: row.serviceName || row.service || '',
+      date: row.date || '',
+      time: row.time || '',
+      status: row.status || (existing ? existing.status : 'confirmed'),
+      notes: row.notes || ''
+    };
+    if(existing){
+      DB.bookings = DB.bookings.map(b=> b.id===existing.id ? booking : b);
+    } else {
+      DB.bookings.push(booking);
+    }
+  });
+}
+
+// تشغيل/إيقاف المزامنة الدورية
+function startAutoSync(){
+  stopAutoSync();
+  if(!DB.settings.syncWebhookUrl) return;
+  fetchBookingsFromSheet(true); // أول تحديث فورًا
+  syncTimer = setInterval(()=>fetchBookingsFromSheet(true), 30000); // كل 30 ثانية
+}
+function stopAutoSync(){
+  if(syncTimer){ clearInterval(syncTimer); syncTimer=null; }
 }
 
 /* ---------------- render: home ---------------- */
@@ -388,13 +454,18 @@ function renderSettings(){
   document.getElementById('setClinicName').value = DB.settings.clinicName||'';
   document.getElementById('setClinicPhone').value = DB.settings.clinicPhone||'';
   document.getElementById('setWebhookUrl').value = DB.settings.webhookUrl||'';
+  const syncEl = document.getElementById('setSyncWebhookUrl');
+  if(syncEl) syncEl.value = DB.settings.syncWebhookUrl||'';
 }
 async function saveSettings(){
   DB.settings.clinicName = document.getElementById('setClinicName').value.trim();
   DB.settings.clinicPhone = document.getElementById('setClinicPhone').value.trim();
   DB.settings.webhookUrl = document.getElementById('setWebhookUrl').value.trim();
+  const syncEl = document.getElementById('setSyncWebhookUrl');
+  if(syncEl) DB.settings.syncWebhookUrl = syncEl.value.trim();
   await saveDB();
   showToast('تم حفظ الإعدادات');
+  startAutoSync(); // يشغّل المزامنة على طول لو الرابط اتغيّر
 }
 async function testWebhook(){
   const box = document.getElementById('webhookStatus');
@@ -424,4 +495,5 @@ function esc(s){ return (s??'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;',
   await loadDB();
   document.getElementById('bookingDate') && (document.getElementById('bookingDate').min = todayStr());
   render();
+  startAutoSync(); // يبدأ تحديث الحجوزات من n8n تلقائيًا كل 30 ثانية لو الرابط متسجل
 })();

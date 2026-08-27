@@ -106,15 +106,21 @@
           <input id="setClinicPhone" placeholder="01xxxxxxxxx">
         </div>
         <div class="field">
-          <label>رابط Webhook الخاص بـ n8n</label>
+          <label>رابط Webhook الخاص بـ n8n (إرسال الحجوزات)</label>
           <input id="setWebhookUrl" placeholder="https://your-n8n-instance/webhook/xxxx" dir="ltr" style="text-align:left;">
         </div>
+        <div class="field">
+          <label>رابط مزامنة الحجوزات من جوجل شيت (GET)</label>
+          <input id="setSyncWebhookUrl" placeholder="https://your-n8n-instance/webhook/get-bookings" dir="ltr" style="text-align:left;">
+        </div>
         <div class="settings-note">
-          لما تحفظ رابط الـ Webhook، أي حجز جديد أو تعديل أو إلغاء هيتبعت لـ n8n تلقائيًا كـ JSON، وبعدين تقدر تبني الـ workflow اللي يبعت رسالة تأكيد على واتساب. لو الرابط فاضي، الموقع هيشتغل عادي من غير إرسال.
+          لما تحفظ رابط الـ Webhook الأول، أي حجز جديد أو تعديل أو إلغاء هيتبعت لـ n8n تلقائيًا كـ JSON، وبعدين تقدر تبني الـ workflow اللي يبعت رسالة تأكيد على واتساب. لو الرابط فاضي، الموقع هيشتغل عادي من غير إرسال.<br>
+          أما رابط المزامنة التاني، فبيخلي الموقع يجيب الحجوزات المسجلة في جوجل شيت (زي حجوزات بوت تليجرام) ويحدثها تلقائيًا كل 30 ثانية من غير ما تعمل ريفريش للصفحة.
         </div>
         <div class="modal-actions" style="justify-content:flex-start;margin-top:16px;">
           <button class="btn btn-teal" onclick="saveSettings()">حفظ الإعدادات</button>
           <button class="btn btn-outline" onclick="testWebhook()">اختبار الاتصال</button>
+          <button class="btn btn-outline" onclick="fetchBookingsFromSheet()">تحديث الحجوزات الآن</button>
         </div>
         <div id="webhookStatus"></div>
       </div>
